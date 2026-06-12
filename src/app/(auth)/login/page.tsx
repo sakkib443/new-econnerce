@@ -33,11 +33,11 @@ const LoginPage = () => {
             // Save to Redux
             dispatch(loginSuccess({
                 user: res.data.user,
-                token: res.data.accessToken
+                token: res.data.tokens.accessToken
             }));
 
             // Save to LocalStorage
-            localStorage.setItem('token', res.data.accessToken);
+            localStorage.setItem('token', res.data.tokens.accessToken);
 
             toast.success('Login Successful! Welcome back.', {
                 style: {

@@ -141,16 +141,35 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
         setMobileMenuOpen(false);
     }, [pathname]);
 
+    // Auto-expand parent menu if any submenu is active
+    useEffect(() => {
+        menuItems.forEach((item) => {
+            if (item.submenu) {
+                const isSubmenuActive = item.submenu.some(sub => pathname === sub.href);
+                if (isSubmenuActive) {
+                    setExpandedMenu(item.name);
+                }
+            }
+        });
+    }, [pathname]);
+
     const handleLogout = () => {
         localStorage.removeItem('token');
         router.push('/');
     };
 
-    const isActive = (href: string) => {
-        if (href === '/dashboard/admin') {
-            return pathname === href;
+    // Check if exact path matches (for items without submenu)
+    const isExactActive = (href: string) => {
+        return pathname === href;
+    };
+
+    // Check if a menu with submenu should show parent as "expanded/active-ish"
+    const isParentActive = (item: typeof menuItems[0]) => {
+        if (!item.submenu) {
+            return pathname === item.href;
         }
-        return pathname.startsWith(href);
+        // For items with submenu, check if any submenu matches
+        return item.submenu.some(sub => pathname === sub.href);
     };
 
     return (
@@ -206,9 +225,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                     )}
 
                     {menuItems.map((item) => {
-                        const active = isActive(item.href);
                         const hasSubmenu = item.submenu && item.submenu.length > 0;
                         const isExpanded = expandedMenu === item.name;
+                        const parentActive = isParentActive(item);
+                        // For items without submenu, check exact match
+                        const exactActive = !hasSubmenu && isExactActive(item.href);
 
                         return (
                             <div key={item.name}>
@@ -222,14 +243,16 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                                     }}
                                     className={`
                                         flex items-center justify-between px-4 py-3 rounded-md transition-all duration-200
-                                        ${active
+                                        ${exactActive
                                             ? 'bg-[#5CAF90] text-white shadow-md'
-                                            : 'text-gray-300 hover:bg-white/10 hover:text-white'
+                                            : hasSubmenu && parentActive
+                                                ? 'bg-white/5 text-white'
+                                                : 'text-gray-300 hover:bg-white/10 hover:text-white'
                                         }
                                     `}
                                 >
                                     <div className="flex items-center gap-3">
-                                        <item.icon size={20} />
+                                        <item.icon size={20} className={parentActive ? 'text-[#5CAF90]' : ''} />
                                         {sidebarOpen && <span className="font-medium">{item.name}</span>}
                                     </div>
                                     {sidebarOpen && (
@@ -252,21 +275,24 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
                                 {/* Submenu */}
                                 {hasSubmenu && isExpanded && sidebarOpen && (
                                     <div className="mt-1 ml-4 pl-4 border-l border-gray-700 space-y-1">
-                                        {item.submenu!.map((sub) => (
-                                            <Link
-                                                key={sub.name}
-                                                href={sub.href}
-                                                className={`
-                                                    block px-4 py-2 rounded-md text-sm transition-colors
-                                                    ${pathname === sub.href
-                                                        ? 'text-[#5CAF90] bg-[#5CAF90]/10'
-                                                        : 'text-gray-400 hover:text-white hover:bg-white/5'
-                                                    }
-                                                `}
-                                            >
-                                                {sub.name}
-                                            </Link>
-                                        ))}
+                                        {item.submenu!.map((sub) => {
+                                            const subActive = pathname === sub.href;
+                                            return (
+                                                <Link
+                                                    key={sub.name}
+                                                    href={sub.href}
+                                                    className={`
+                                                        block px-4 py-2 rounded-md text-sm transition-colors
+                                                        ${subActive
+                                                            ? 'text-white bg-[#5CAF90] font-semibold'
+                                                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                                        }
+                                                    `}
+                                                >
+                                                    {sub.name}
+                                                </Link>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>

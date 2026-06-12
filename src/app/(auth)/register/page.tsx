@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAppDispatch } from '@/redux/hooks';
+import { loginSuccess } from '@/redux/slices/authSlice';
 import { useRegisterMutation } from '@/redux/api/authApi';
 import { toast } from 'react-hot-toast';
 import { FiUser, FiMail, FiLock, FiPhone, FiArrowRight, FiCheck } from 'react-icons/fi';
@@ -13,11 +15,14 @@ const RegisterPage = () => {
         lastName: '',
         email: '',
         phone: '',
+        location: '',
+        city: '',
         password: '',
         confirmPassword: '',
     });
 
     const router = useRouter();
+    const dispatch = useAppDispatch();
     const [register, { isLoading }] = useRegisterMutation();
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,16 +37,27 @@ const RegisterPage = () => {
         }
 
         try {
-            await register({
+            const res = await register({
                 firstName: formData.firstName,
                 lastName: formData.lastName,
                 email: formData.email,
                 phone: formData.phone,
+                location: formData.location,
+                city: formData.city,
                 password: formData.password,
             }).unwrap();
 
-            toast.success('Account Created! Please login.', {
-                duration: 5000,
+            // Auto-login: Save to Redux
+            dispatch(loginSuccess({
+                user: res.data.user,
+                token: res.data.tokens.accessToken
+            }));
+
+            // Save to LocalStorage
+            localStorage.setItem('token', res.data.tokens.accessToken);
+
+            toast.success('Welcome! Account created & logged in.', {
+                duration: 4000,
                 icon: '🎉',
                 style: {
                     borderRadius: '10px',
@@ -50,7 +66,12 @@ const RegisterPage = () => {
                 },
             });
 
-            router.push('/login');
+            // Redirect based on role
+            if (res.data.user.role === 'admin') {
+                router.push('/dashboard/admin');
+            } else {
+                router.push('/dashboard/user');
+            }
         } catch (err: any) {
             toast.error(err?.data?.message || 'Registration failed. Try again.', {
                 duration: 4000
@@ -133,6 +154,35 @@ const RegisterPage = () => {
                             className="block w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all outline-none"
                             placeholder="+880 1XXX-XXXXXX"
                         />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2 px-1">City</label>
+                        <div className="relative group">
+                            <input
+                                type="text"
+                                name="city"
+                                value={formData.city}
+                                onChange={handleChange}
+                                className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all outline-none"
+                                placeholder="Dhaka, Chittagong..."
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-sm font-bold text-gray-700 mb-2 px-1">Area/Location</label>
+                        <div className="relative group">
+                            <input
+                                type="text"
+                                name="location"
+                                value={formData.location}
+                                onChange={handleChange}
+                                className="block w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-md text-gray-900 text-sm focus:ring-2 focus:ring-[var(--color-primary)] focus:border-transparent transition-all outline-none"
+                                placeholder="Mirpur, Dhanmondi..."
+                            />
+                        </div>
                     </div>
                 </div>
 
